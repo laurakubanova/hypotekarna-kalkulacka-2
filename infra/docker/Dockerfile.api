@@ -1,0 +1,26 @@
+FROM node:20-alpine AS base
+WORKDIR /repo
+RUN corepack enable
+
+FROM base AS deps
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY apps/api/package.json apps/api/package.json
+COPY packages/mortgage-engine/package.json packages/mortgage-engine/package.json
+COPY packages/shared-types/package.json packages/shared-types/package.json
+COPY packages/config/package.json packages/config/package.json
+RUN pnpm install --frozen-lockfile
+
+FROM deps AS build
+COPY . .
+RUN pnpm --filter @hk/api prisma generate
+RUN pnpm --filter @hk/api build
+
+FROM base AS runner
+ENV NODE_ENV=production
+COPY --from=build /repo/apps/api/dist ./apps/api/dist
+COPY --from=build /repo/apps/api/prisma ./apps/api/prisma
+COPY --from=build /repo/node_modules ./node_modules
+COPY --from=build /repo/apps/api/package.json ./apps/api/package.json
+WORKDIR /repo/apps/api
+EXPOSE 3001
+CMD ["node", "dist/main.js"]

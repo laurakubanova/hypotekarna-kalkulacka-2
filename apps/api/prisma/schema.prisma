@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  passwordHash String
+  role      Role     @default(VIEWER)
+  createdAt DateTime @default(now())
+}
+
+model Bank {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  ratePlans RatePlan[]
+}
+
+model RatePlan {
+  id                   String   @id @default(uuid())
+  bank                 Bank     @relation(fields: [bankId], references: [id])
+  bankId               String
+  productName          String
+  interestRateAnnualPct Float
+  fixationYears        Int
+  maxLtvPct            Float
+  minLoanAmount        Float
+  validFrom            DateTime
+  createdAt            DateTime @default(now())
+
+  @@index([bankId])
+}
+
+model MortgageApplication {
+  id                          String   @id @default(uuid())
+  loanAmount                  Float
+  propertyValue               Float
+  interestRateAnnualPct       Float
+  termYears                   Int
+  applicantNetIncomeMonthly   Float
+  existingMonthlyDebtPayments Float
+  monthlyPayment              Float
+  ltvPct                      Float
+  dstiPct                     Float
+  withinNbsLimits             Boolean
+  createdAt                   DateTime @default(now())
+}
